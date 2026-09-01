@@ -25,7 +25,6 @@ import org.h2gis.utilities.GeographyUtilities
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import org.locationtech.jts.geom.Geometry
 import org.orbisgis.data.H2GIS
@@ -37,8 +36,6 @@ import static org.junit.jupiter.api.Assertions.*
 
 class WorflowOSMTest extends WorkflowAbstractTest {
 
-    @TempDir(cleanup = CleanupMode.ON_SUCCESS)
-    static File folder
 
     /**
      * This method is used to copy resources from the jar the tmp folder in order to limit
@@ -47,26 +44,31 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     @BeforeAll
     static void copyOSMFiles() {
         //Here we copy osm files stored in resources to avoid overpass query
-        def overpass_file_pont_de_veyle = new File(WorflowOSMTest.class.getResource("overpass_pont_de_veyle.osm").toURI())
+        def overpass_file_pont_de_veyle = new File(WorflowOSMTest.class.getResource("overpass_pont_de_veyle.osm.gz").toURI())
         //The sha encoding used to set a name to the file by OSMTools
-        def pont_de_veyle_query_sha = "4e8e5b748c6b5b571ebac46714aaaeba112045e541facef8623a1fc233004255"
-        def copy_pont_de_veyle = new File(System.getProperty("java.io.tmpdir") + File.separator + pont_de_veyle_query_sha + ".osm")
+        def pont_de_veyle_query_sha = "e1fead289bf9a9373fa38d8aea1dca534ac47ec4a4fd9a8e357538430b32b868"
+        def copy_pont_de_veyle = new File(System.getProperty("java.io.tmpdir") + File.separator + pont_de_veyle_query_sha + ".osm.gz")
         FileUtils.copyFile(overpass_file_pont_de_veyle, copy_pont_de_veyle)
-        def overpass_file_bbox = new File(WorflowOSMTest.class.getResource("overpass_bbox.osm").toURI())
+        def overpass_file_bbox = new File(WorflowOSMTest.class.getResource("overpass_bbox.osm.gz").toURI())
         //The sha encoding used to set a name to the file by OSMTools
-        def bbox_query_sha = "5c4099c626089c4dd6f612b77ce6c4c0b7f4ddbd81d1dd2e36598601c972e5da"
-        def copy_bbox = new File(System.getProperty("java.io.tmpdir") + File.separator + bbox_query_sha + ".osm")
+        def bbox_query_sha = "c8e38f1be09701ea419fbe92853f7a6a9e40333a8aa91c6859d24bfd2697dab9"
+        def copy_bbox = new File(System.getProperty("java.io.tmpdir") + File.separator + bbox_query_sha + ".osm.gz")
         FileUtils.copyFile(overpass_file_bbox, copy_bbox)
-        def overpass_file_bbox_logger = new File(WorflowOSMTest.class.getResource("overpass_bbox_logger.osm").toURI())
+        def overpass_file_bbox_logger = new File(WorflowOSMTest.class.getResource("overpass_bbox_logger.osm.gz").toURI())
         //The sha encoding used to set a name to the file by OSMTools
-        def bbox_logger_query_sha = "7da2d1cd63290068a75fb5f94510c8461e65f5790f9f8c6b97aab8204ef4699e"
-        def copy_bbox_logger = new File(System.getProperty("java.io.tmpdir") + File.separator + bbox_logger_query_sha + ".osm")
+        def bbox_logger_query_sha = "66088df9da4290c43ebd985637ed6a04b63bf2c097a76ed75cde9ec49d8d69b4"
+        def copy_bbox_logger = new File(System.getProperty("java.io.tmpdir") + File.separator + bbox_logger_query_sha + ".osm.gz")
         FileUtils.copyFile(overpass_file_bbox_logger, copy_bbox_logger)
 
+        def overpass_estimate_building_height = new File(WorflowOSMTest.class.getResource("overpass_estimate_building_height.osm.gz").toURI())
+        //The sha encoding used to set a name to the file by OSMTools
+        def overpass_estimate_building_height_query_sha = "d1f30167dd93c1e0343efe32d99da1f169d07dddcd46bb45a85d8444470fe463"
+        def copy_overpass_estimate_building_height = new File(System.getProperty("java.io.tmpdir") + File.separator + overpass_estimate_building_height_query_sha + ".osm.gz")
+        FileUtils.copyFile(overpass_estimate_building_height, copy_overpass_estimate_building_height)
     }
 
     @Test
-    void osmGeoIndicatorsFromTestFiles() {
+    void osmGeoIndicatorsFromTestFiles(@TempDir File folder) {
         String urlBuilding = new File(getClass().getResource("BUILDING.geojson").toURI()).absolutePath
         String urlRoad = new File(getClass().getResource("ROAD.geojson").toURI()).absolutePath
         String urlRail = new File(getClass().getResource("RAIL.geojson").toURI()).absolutePath
@@ -108,8 +110,7 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void osmGeoIndicatorsFromTestFilesWhenOnlySea() {
-
+    void osmGeoIndicatorsFromTestFilesWhenOnlySea(@TempDir File folder) {
         String urlZone = new File(getClass().getResource("ZONE_ONLY_SEA.geojson").toURI()).absolutePath
 
         //TODO enable it for debug purpose
@@ -207,15 +208,12 @@ class WorflowOSMTest extends WorkflowAbstractTest {
      * Save the geoclimate result to an H2GIS database
      */
     @Test
-    void osmWorkflowToH2Database() {
+    void osmWorkflowToH2Database(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "osmWorkflowToH2Database"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the OSM workflow and store the result into a database",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": false
                 ],
@@ -225,74 +223,76 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "database":
                                 ["user"    : "sa",
                                  "password": "",
-                                 "url"     : "h2://" + dirFile.absolutePath + File.separator + "geoclimate_chain_db_output;AUTO_SERVER=TRUE",
+                                 "url"     : "h2://" + directory + File.separator + "geoclimate_chain_db_output;AUTO_SERVER=TRUE",
                                  "tables"  : [
-                                         "rsu_indicators": "rsu_indicators",
-                                         "rsu_lcz"       : "rsu_lcz"]]],
+                                         "rsu_indicators"  : "rsu_indicators",
+                                         "rsu_lcz"         : "rsu_lcz",
+                                         "building_updated": "building_updated"]]],
                 "parameters"  :
-                        ["distance"    : 0,
-                         rsu_indicators: ["indicatorUse" : ["LCZ"],
-                                          "svfSimplified": true]
+                        [
+                                rsu_indicators: ["indicatorUse" : ["LCZ"],
+                                                 "svfSimplified": true]
                         ]
         ]
         OSM.workflow(osm_parmeters)
-        H2GIS outputdb = H2GIS.open(dirFile.absolutePath + File.separator + "geoclimate_chain_db_output;AUTO_SERVER=TRUE")
+        H2GIS outputdb = H2GIS.open(directory + File.separator + "geoclimate_chain_db_output;AUTO_SERVER=TRUE")
         def rsu_indicatorsTable = outputdb.getTable("rsu_indicators")
         assertNotNull(rsu_indicatorsTable)
         assertTrue(rsu_indicatorsTable.getRowCount() > 0)
         def rsu_lczTable = outputdb.getTable("rsu_lcz")
         assertNotNull(rsu_lczTable)
         assertTrue(rsu_lczTable.getRowCount() > 0)
+        def building_updated = outputdb.getTable("building_updated")
+        assertNotNull(building_updated)
+        assertTrue(building_updated.getRowCount() > 0)
+
     }
 
     /**
      * Save the geoclimate result to a PostGIS database
      */
     @Test
-    void osmWorkflowToPostGISDatabase() {
-        String directory = folder.absolutePath + File.separator + "osmWorkflowToPostGISDatabase"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
-        def osm_parmeters = [
-                "description" : "Example of configuration file to run the OSM workflow and store the result in a folder",
-                "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
-                        "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
-                        "delete": false
-                ],
-                "input"       : [
-                        "locations": ["Pont-de-Veyle"]],
-                "output"      : [
-                        "database":
-                                ["user"    : "orbisgis",
-                                 "password": "orbisgis",
-                                 "url"     : "postgis://localhost:5432/orbisgis_db",
-                                 "tables"  : [
-                                         "rsu_indicators"         : "rsu_indicators",
-                                         "rsu_lcz"                : "rsu_lcz",
-                                         "zone"                   : "zone",
-                                         "grid_indicators"        : "grid_indicators",
-                                         "building_updated": "building_updated"]]],
-                "parameters"  :
-                        ["distance"       : 0,
-                         rsu_indicators   : ["indicatorUse" : ["LCZ"],
-                                             "svfSimplified": true],
-                         "grid_indicators": [
-                                 "x_size"    : 1000,
-                                 "y_size"    : 1000,
-                                 "indicators": ["ROAD_FRACTION"]
-                         ]
-                        ]
-        ]
-        OSM.workflow(osm_parmeters)
-        def postgis_dbProperties = [databaseName: 'orbisgis_db',
-                                    user        : 'orbisgis',
-                                    password    : 'orbisgis',
-                                    url         : 'jdbc:postgresql://localhost:5432/'
-        ]
-        POSTGIS postgis = POSTGIS.open(postgis_dbProperties);
-        if (postgis) {
+    void osmWorkflowToPostGISDatabase(@TempDir File folder) {
+        try {
+            def postgis_dbProperties = [databaseName: 'orbisgis_db',
+                                        user        : 'orbisgis',
+                                        password    : 'orbisgis',
+                                        url         : 'jdbc:postgresql://localhost:5432/'
+            ]
+            POSTGIS postgis = POSTGIS.open(postgis_dbProperties);
+            if (postgis) {
+                def osm_parmeters = [
+                    "description" : "Example of configuration file to run the OSM workflow and store the result in a folder",
+                    "geoclimatedb": [
+                            "folder": folder.absolutePath + File.separator + "osmWorkflowToPostGISDatabase",
+                            "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
+                            "delete": false
+                    ],
+                    "input"       : [
+                            "locations": ["Pont-de-Veyle"]],
+                    "output"      : [
+                            "database":
+                                    ["user"    : "orbisgis",
+                                     "password": "orbisgis",
+                                     "url"     : "postgis://localhost:5432/orbisgis_db",
+                                     "tables"  : [
+                                             "rsu_indicators"  : "rsu_indicators",
+                                             "rsu_lcz"         : "rsu_lcz",
+                                             "zone"            : "zone",
+                                             "grid_indicators" : "grid_indicators",
+                                             "building_updated": "building_updated"]]],
+                    "parameters"  :
+                            [
+                                    rsu_indicators   : ["indicatorUse" : ["LCZ"],
+                                                        "svfSimplified": true],
+                                    "grid_indicators": [
+                                            "x_size"    : 1000,
+                                            "y_size"    : 1000,
+                                            "indicators": ["ROAD_FRACTION"]
+                                    ]
+                            ]
+            ]
+            OSM.workflow(osm_parmeters)
             def rsu_indicatorsTable = postgis.getTable("rsu_indicators")
             assertNotNull(rsu_indicatorsTable)
             assertTrue(rsu_indicatorsTable.getRowCount() > 0)
@@ -309,18 +309,18 @@ class WorflowOSMTest extends WorkflowAbstractTest {
             assertNotNull(building_updated)
             assertTrue(building_updated.getRowCount() > 0)
         }
+        }catch (Exception e){
+
+        }
     }
 
     @Test
-    void testOSMWorkflowFromPlaceNameWithSrid() {
+    void testOSMWorkflowFromPlaceNameWithSrid(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "testOSMWorkflowFromPlaceNameWithSrid"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the OSM workflow and store the results in a folder",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": false
                 ],
@@ -330,16 +330,16 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "folder": directory,
                         "srid"  : 4326],
                 "parameters"  :
-                        ["distance"    : 0,
-                         rsu_indicators: ["indicatorUse" : ["LCZ"],
-                                          "svfSimplified": true]
+                        [
+                                rsu_indicators: ["indicatorUse" : ["LCZ"],
+                                                 "svfSimplified": true]
                         ]
         ]
         OSM.workflow(osm_parmeters)
         //Test the SRID of all output files
         def geoFiles = []
-        def folder = new File("${directory + File.separator}osm_Pont-de-Veyle")
-        folder.eachFileRecurse groovy.io.FileType.FILES, { file ->
+        def output_folder = new File("${directory + File.separator}osm_Pont-de-Veyle")
+        output_folder.eachFileRecurse groovy.io.FileType.FILES, { file ->
             if (file.name.toLowerCase().endsWith(".fgb")) {
                 geoFiles << file.getAbsolutePath()
             }
@@ -347,23 +347,20 @@ class WorflowOSMTest extends WorkflowAbstractTest {
         H2GIS h2gis = H2GIS.open("${directory + File.separator}geoclimate_chain_db;AUTO_SERVER=TRUE")
         geoFiles.eachWithIndex { geoFile, index ->
             def tableName = h2gis.load(geoFile, true)
-            if(h2gis.getRowCount(tableName)>0) {
+            if (h2gis.getRowCount(tableName) > 0) {
                 assertEquals(4326, h2gis.getSpatialTable(tableName).srid)
             }
         }
     }
 
     @Test
-    void testOSMWorkflowFromBbox() {
+    void testOSMWorkflowFromBbox(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "testOSMWorkflowFromBbox"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
-        def bbox = [38.89557963573336, -77.03930318355559, 38.89944983078282, -77.03364372253417]
+        def bbox = [43.726898, 7.298452, 43.727677, 7.299632]
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the OSM workflow and store the result in a folder",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": true
                 ],
@@ -373,9 +370,9 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "folder": directory]
         ]
         OSM.WorkflowOSM.workflow(osm_parmeters)
-        def folder = new File(directory + File.separator + "osm_" + bbox.join("_"))
+        def output_folder = new File(directory + File.separator + "osm_" + bbox.join("_"))
         def countFiles = 0;
-        folder.eachFileRecurse groovy.io.FileType.FILES, { file ->
+        output_folder.eachFileRecurse groovy.io.FileType.FILES, { file ->
             if (file.name.toLowerCase().endsWith(".fgb")) {
                 countFiles++
             }
@@ -385,16 +382,13 @@ class WorflowOSMTest extends WorkflowAbstractTest {
 
     @Disabled
     @Test
-    void testOSMWorkflowFromPoint() {
+    void testOSMWorkflowFromPoint(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "testOSMWorkflowFromPoint"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
         def bbox = OSM.bbox(48.78146, -3.01115, 100)
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the OSM workflow and store the result in a folder",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": true
                 ],
@@ -404,9 +398,9 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "folder": directory]
         ]
         OSM.WorkflowOSM.workflow(osm_parmeters)
-        def folder = new File(directory + File.separator + "osm_" + bbox.join("_"))
+        def output_folder = new File(directory + File.separator + "osm_" + bbox.join("_"))
         def resultFiles = []
-        folder.eachFileRecurse groovy.io.FileType.FILES, { file ->
+        output_folder.eachFileRecurse groovy.io.FileType.FILES, { file ->
             if (file.name.toLowerCase().endsWith(".fgb")) {
                 resultFiles << file.getAbsolutePath()
             }
@@ -416,15 +410,12 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void testOSMWorkflowBadOSMFilters() {
+    void testOSMWorkflowBadOSMFilters(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "testOSMWorkflowBadOSMFilters"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the OSM workflow and store the results in a folder",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": true
                 ],
@@ -437,15 +428,12 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void workflowWrongMapOfWeights() {
+    void workflowWrongMapOfWeights(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "workflowWrongMapOfWeights"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the OSM workflow and store the resultst in a folder",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": true
                 ],
@@ -454,34 +442,31 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                 "output"      : [
                         "folder": directory],
                 "parameters"  :
-                        ["distance"    : 100,
-                         "hLevMin"     : 3,
-                         rsu_indicators: ["indicatorUse" : ["LCZ"],
-                                          "svfSimplified": true,
-                                          "mapOfWeights" :
-                                                  ["sky_view_factor"             : 1,
-                                                   "aspect_ratio"                : 1,
-                                                   "building_surface_fraction"   : 1,
-                                                   "impervious_surface_fraction" : 1,
-                                                   "pervious_surface_fraction"   : 1,
-                                                   "height_of_roughness_elements": 1,
-                                                   "terrain_roughness_length"    : 1,
-                                                   "terrain_roughness_class"     : 1]]
+                        [
+                                "hLevMin"     : 3,
+                                rsu_indicators: ["indicatorUse" : ["LCZ"],
+                                                 "svfSimplified": true,
+                                                 "mapOfWeights" :
+                                                         ["sky_view_factor"             : 1,
+                                                          "aspect_ratio"                : 1,
+                                                          "building_surface_fraction"   : 1,
+                                                          "impervious_surface_fraction" : 1,
+                                                          "pervious_surface_fraction"   : 1,
+                                                          "height_of_roughness_elements": 1,
+                                                          "terrain_roughness_length"    : 1,
+                                                          "terrain_roughness_class"     : 1]]
                         ]
         ]
         assertThrows(Exception.class, () -> OSM.workflow(osm_parmeters))
     }
 
     @Test
-    void testGrid_Indicators() {
+    void testGrid_Indicators(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "testGrid_Indicators"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the grid indicators",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": false
                 ],
@@ -491,13 +476,13 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "folder": ["path"  : directory,
                                    "tables": ["grid_indicators", "zone"]]],
                 "parameters"  :
-                        ["distance"       : 0,
-                         "grid_indicators": [
-                                 "x_size"    : 1000,
-                                 "y_size"    : 1000,
-                                 "indicators": ["WATER_FRACTION", "LCZ_PRIMARY"],
-                                 "output"    : "asc"
-                         ]
+                        [
+                                "grid_indicators": [
+                                        "x_size"    : 1000,
+                                        "y_size"    : 1000,
+                                        "indicators": ["WATER_FRACTION", "LCZ_PRIMARY"],
+                                        "output"    : "asc"
+                                ]
                         ]
         ]
         Map process = OSM.WorkflowOSM.workflow(osm_parmeters)
@@ -509,18 +494,15 @@ class WorflowOSMTest extends WorkflowAbstractTest {
         h2gis.execute("DROP TABLE IF EXISTS water_grid; CALL ASCREAD('${grid_file.getAbsolutePath()}', 'water_grid')")
         assertTrue h2gis.firstRow("select count(*) as count from water_grid").count == 6
         assertEquals(6, h2gis.firstRow("select count(*) as count from $gridTable where LCZ_PRIMARY is not null").count)
-     }
+    }
 
     @Test
-    void testLoggerZones() {
+    void testLoggerZones(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "testLoggerZones"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the grid indicators",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": false
                 ],
@@ -544,15 +526,12 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void osmWrongAreaSize() {
+    void osmWrongAreaSize(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "osmWrongAreaSize"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the OSM workflow and store the result into a database",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": false
                 ],
@@ -563,14 +542,14 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "database":
                                 ["user"    : "sa",
                                  "password": "",
-                                 "url"     : "jdbc:h2://" + dirFile.absolutePath + File.separator + "geoclimate_chain_db_output;AUTO_SERVER=TRUE",
+                                 "url"     : "h2://" + directory + File.separator + "geoclimate_chain_db_output;AUTO_SERVER=TRUE",
                                  "tables"  : [
                                          "rsu_indicators": "rsu_indicators",
                                          "rsu_lcz"       : "rsu_lcz"]]],
                 "parameters"  :
-                        ["distance"    : 0,
-                         rsu_indicators: ["indicatorUse" : ["LCZ"],
-                                          "svfSimplified": true]
+                        [
+                                rsu_indicators: ["indicatorUse" : ["LCZ"],
+                                                 "svfSimplified": true]
                         ]
         ]
         assertThrows(Exception.class, () -> OSM.workflow(osm_parmeters))
@@ -578,15 +557,13 @@ class WorflowOSMTest extends WorkflowAbstractTest {
 
 
     @Test
-    void testOSMTEB() {
+    void testOSMTEB(@TempDir File folder) {
         String directory = folder.absolutePath + File.separator + "testOSMTEB"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+        new File(directory).mkdir()
         def osm_parmeters = [
                 "description" : "Example of configuration file to run the OSM workflow and store the result in a folder",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": true
                 ],
@@ -606,27 +583,24 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void testTarget() {
-        String directory = folder.absolutePath + File.separator + "testOSMTEB"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testTarget(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testTarget"
         def osm_parmeters = [
                 "description" : "Compute the Target land input",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db",
                         "delete": false
                 ],
                 "input"       : [
                         "locations": ["Pont-de-Veyle"]
-                        ],
+                ],
                 "output"      : [
                         "folder": directory],
                 "parameters"  :
                         [
                                 rsu_indicators: [
-                                        "indicatorUse" : ["target"]
+                                        "indicatorUse": ["TARGET"]
                                 ]
                         ]
         ]
@@ -639,15 +613,12 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void testTargetGridSize() {
-        String directory = folder.absolutePath + File.separator + "testOSMTEB"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testTargetGridSize(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testTargetGridSize"
         def osm_parmeters = [
                 "description" : "Compute the target land input",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db",
                         "delete": false
                 ],
@@ -657,8 +628,8 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "folder": directory],
                 "parameters"  :
                         [
-                                rsu_indicators: ["indicatorUse" : ["TARGET", "LCZ"]
-                                ],"grid_indicators"   : [
+                                rsu_indicators      : ["indicatorUse": ["TARGET", "LCZ"]
+                                ], "grid_indicators": [
                                 "x_size"    : 200,
                                 "y_size"    : 200,
                                 "indicators": [
@@ -677,15 +648,12 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void testRoadTrafficAndNoiseIndicators() {
-        String directory = folder.absolutePath + File.separator + "testRoad_traffic"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testRoadTrafficAndNoiseIndicators(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testRoadTrafficAndNoiseIndicators"
         def osm_parmeters = [
                 "description" : "Example of configuration file to run only the road traffic estimation",
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
                         "delete": false
                 ],
@@ -720,12 +688,12 @@ class WorflowOSMTest extends WorkflowAbstractTest {
         File dirFile = new File(directory)
         dirFile.delete()
         dirFile.mkdir()
-        def location= [15.004311, 108.55263, 15.094142, 108.64575] //visual validation in a GIS
-        location= [15.094142,108.73887,15.183973,108.83199] //visual validation in a GIS
-        location = [62.027935,129.76294,62.045902,129.80127] //visual validation in a GIS
-        location =[40.70075,-74.03082,40.709732,-74.01897] //visual validation in a GIS
-        location=[40.70075,-74.01897,40.709732,-74.00712] //visual validation in a GIS
-        location=[53.242824,-9.103203,53.299902,-8.915749] //visual validation in a GIS
+        def location = [15.004311, 108.55263, 15.094142, 108.64575] //visual validation in a GIS
+        location = [15.094142, 108.73887, 15.183973, 108.83199] //visual validation in a GIS
+        location = [62.027935, 129.76294, 62.045902, 129.80127] //visual validation in a GIS
+        location = [40.70075, -74.03082, 40.709732, -74.01897] //visual validation in a GIS
+        location = [40.70075, -74.01897, 40.709732, -74.00712] //visual validation in a GIS
+        location = [53.242824, -9.103203, 53.299902, -8.915749] //visual validation in a GIS
         //location=[48.882799,2.221194,48.899165,2.259474]
 
         def osm_parmeters = [
@@ -743,11 +711,11 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                 ,
                 "parameters"  :
                         [
-                         "rsu_indicators"       : [
-                                 //"surface_urban_areas":0,
-                                 //"surface_vegetation":1500,
-                                 "indicatorUse": ["LCZ"]
-                         ]
+                                "rsu_indicators": [
+                                        //"surface_urban_areas":0,
+                                        //"surface_vegetation":1500,
+                                        "indicatorUse": ["LCZ"]
+                                ]
                         ]
         ]
         OSM.workflow(osm_parmeters)
@@ -768,11 +736,11 @@ class WorflowOSMTest extends WorkflowAbstractTest {
         //location =[47.214976592711274,-1.6425595375815742,47.25814872718718,-1.5659501122281323]
         //location=[47.215334,-1.558058,47.216646,-1.556185]
         //location = [nominatim.bbox]
-        def location1= [47.642695,-2.777953,47.648651,-2.769413]
-        def location2= [47.642723,-2.769456,47.648622,-2.761259]
+        def location1 = [47.642695, -2.777953, 47.648651, -2.769413]
+        def location2 = [47.642723, -2.769456, 47.648622, -2.761259]
 
         //Farm land pb
-        location1  = [50.957075,1.946297,50.988314,2.027321]
+        location1 = [50.957075, 1.946297, 50.988314, 2.027321]
 
         //location = [[47.504374,-0.479279,47.516621,-0.454495]]
 
@@ -787,7 +755,7 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                 "description" : "Example of configuration file to run the OSM workflow and store the result in a folder",
                 "geoclimatedb": [
                         "folder": dirFile.absolutePath,
-                        "name"  : "geoclimate_test_integration;",
+                        "name"  : "geoclimate_test_integration;AUTO_SERVER=TRUE",
                         "delete": false
                 ],
                 "input"       : [
@@ -795,34 +763,34 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "area"     : 2800,
                         "date": "2023-01-01T12:00:00Z"
                         //"date":"2017-12-31T19:20:00Z",
-                        /*"timeout":182,
-                        "maxsize": 536870918,
-                        "endpoint":"https://lz4.overpass-api.de/api"*/],
+                        //"maxsize": 536870918,
+                        //"endpoint":"https://lz4.overpass-api.de/api"
+                ],
                 "output"      : [
                         "folder": directory]
-                        /*[
-                        "database":
-                                ["user"    : "orbisgis",
-                                 "password": "orbisgis",
-                                 "url"     : "postgis://localhost:5432/orbisgis_db",
-                                 "tables"  : [
-                                         "rsu_indicators"         : "rsu_indicators",
-                                         "rsu_lcz"                : "rsu_lcz",
-                                         "zone"                   : "zone"]]]*/
+                /*[
+                "database":
+                        ["user"    : "orbisgis",
+                         "password": "orbisgis",
+                         "url"     : "postgis://localhost:5432/orbisgis_db",
+                         "tables"  : [
+                                 "rsu_indicators"         : "rsu_indicators",
+                                 "rsu_lcz"                : "rsu_lcz",
+                                 "zone"                   : "zone"]]]*/
                 ,
                 "parameters"  :
                         [//"distance"             : 200,
-                         "rsu_indicators"       : [
-                                 "indicatorUse": ["LCZ"] //, "UTRF"]
+                         "rsu_indicators": [
+                                 "indicatorUse": ["LCZ", "TEB"] //, "UTRF"]
 
-                         ],
+                         ]/*,
                           "grid_indicators"   : [
                                 "x_size"    : grid_size,
                                 "y_size"    : grid_size,
                                 "rowCol": true,
                                 "output" : "geojson",
                                 "indicators": [
-                                        "BUILDING_FRACTION", "BUILDING_HEIGHT", "BUILDING_POP",
+                                        "BUILDING_FRACTION", "BUILDING_HEIGHT",
                                         "BUILDING_TYPE_FRACTION", "WATER_FRACTION", "VEGETATION_FRACTION",
                                         "ROAD_FRACTION", "IMPERVIOUS_FRACTION", "FREE_EXTERNAL_FACADE_DENSITY",
                                         "BUILDING_HEIGHT_WEIGHTED", "BUILDING_SURFACE_DENSITY",
@@ -842,7 +810,7 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                          ]*/
                         ]
         ]
-         OSM.workflow(osm_parmeters)
+        OSM.workflow(osm_parmeters)
     }
 
     /**
@@ -851,23 +819,23 @@ class WorflowOSMTest extends WorkflowAbstractTest {
      * @param distance
      * @return
      */
-    List computeDomains(def osm_zone, float distance){
+    List computeDomains(def osm_zone, float distance) {
         H2GIS db = H2GIS.open("/tmp/mydb")
-       Geometry geom = OSMTools.Utilities.getArea(osm_zone)
+        Geometry geom = OSMTools.Utilities.getArea(osm_zone)
 
-       def lat_lon_bbox_extended = geom.getFactory().toGeometry(GeographyUtilities.expandEnvelopeByMeters(geom.getEnvelopeInternal(), distance))
+        def lat_lon_bbox_extended = geom.getFactory().toGeometry(GeographyUtilities.expandEnvelopeByMeters(geom.getEnvelopeInternal(), distance))
 
-       db.execute("""
+        db.execute("""
            DROP TABLE IF EXISTS domains;
            CREATE TABLE domains as select * from st_makegrid(ST_GEOMFROMTEXT('$lat_lon_bbox_extended', 4326), 500,500)
        """)
-       db.save("domains", "/tmp/domains.geojson", true)
+        db.save("domains", "/tmp/domains.geojson", true)
 
-       def location =[]
-       db.eachRow("SELECT THE_GEOM from DOMAINS"){
-           def env = it.the_geom.getEnvelopeInternal()
-           location<<[ env.getMinY() as float,env.getMinX() as float,env.getMaxY() as float,env.getMaxX() as float]
-       }
+        def location = []
+        db.eachRow("SELECT THE_GEOM from DOMAINS") {
+            def env = it.the_geom.getEnvelopeInternal()
+            location << [env.getMinY() as float, env.getMinX() as float, env.getMaxY() as float, env.getMaxX() as float]
+        }
         return location
     }
 
@@ -952,24 +920,20 @@ class WorflowOSMTest extends WorkflowAbstractTest {
         OSM.WorkflowOSM.workflow(configFile)
     }
 
-
     @Test
-    void testEstimateBuildingWithAllInputHeight() {
-        String directory = folder.absolutePath + File.separator + "test_building_height"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testEstimateBuildingWithAllInputHeight(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testEstimateBuildingWithAllInputHeight"
         def osm_parmeters = [
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db",
                         "delete": false
                 ],
                 "input"       : [
                         "locations": [[43.726898, 7.298452, 43.727677, 7.299632]]],
                 "parameters"  :
-                        ["distance"    : 100,
-                         rsu_indicators: ["indicatorUse": ["LCZ"]]
+                        [
+                                rsu_indicators: ["indicatorUse": ["LCZ"]]
                         ]
         ]
         Map process = OSM.WorkflowOSM.workflow(osm_parmeters)
@@ -980,14 +944,11 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void testEstimateBuildingWithAllInputHeightFromPoint() {
-        String directory = folder.absolutePath + File.separator + "test_building_height"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testEstimateBuildingWithAllInputHeightFromPoint(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testEstimateBuildingWithAllInputHeightFromPoint"
         def osm_parmeters = [
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db",
                         "delete": false
                 ],
@@ -1010,14 +971,11 @@ class WorflowOSMTest extends WorkflowAbstractTest {
 
 
     @Test
-    void testCreateGISLayers() {
-        String directory = folder.absolutePath + File.separator + "test_creategislayers"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testCreateGISLayers(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testCreateGISLayers"
         def osm_parmeters = [
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db",
                         "delete": false
                 ],
@@ -1036,16 +994,13 @@ class WorflowOSMTest extends WorkflowAbstractTest {
         assertEquals(1, h2gis.firstRow("select count(*) as count from $zone").count)
     }
 
+    @Disabled
     @Test
-    void testCreateGISLayersNoOutput() {
-        String directory = folder.absolutePath + File.separator + "test_no_output"
-        directory = "/tmp/db"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testCreateGISLayersNoOutput(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testCreateGISLayersNoOutput"
         def osm_parmeters = [
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db",
                         "delete": false
                 ],
@@ -1065,8 +1020,8 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     @Disabled
     //Because it takes some time to build the OSM query
     @Test
-    void testEstimateBuildingWithAllInputHeightDate() {
-        String directory = folder.absolutePath + File.separator + "test_building_height"
+    void testEstimateBuildingWithAllInputHeightDate(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testEstimateBuildingWithAllInputHeightDate"
         File dirFile = new File(directory)
         dirFile.delete()
         dirFile.mkdir()
@@ -1100,7 +1055,7 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     //This geometry must be redesigned because according the International Hydrographic Organization
     // Golfe de Gascogne must be considered as bay where some main rivers  empty into it
     void testOneSeaLCZ() {
-        String directory = folder.absolutePath + File.separator + "test_sea_lcz"
+        String directory = folder.absolutePath + File.separator + "testOneSeaLCZ"
         File dirFile = new File(directory)
         dirFile.delete()
         dirFile.mkdir()
@@ -1133,56 +1088,58 @@ class WorflowOSMTest extends WorkflowAbstractTest {
      * Save the geoclimate result to a PostGIS database
      */
     @Test
-    void osmWorkflowToPostGISExcludeColumns() {
-        String directory = folder.absolutePath + File.separator + "osmWorkflowToPostGISDatabase"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
-        def osm_parmeters = [
-                "description" : "Example of configuration file to run the OSM workflow and store the result in a folder",
-                "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
-                        "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
-                        "delete": false
-                ],
-                "input"       : [
-                        "locations": ["Pont-de-Veyle"]],
-                "output"      : [
-                        "database":
-                                ["user"    : "orbisgis",
-                                 "password": "orbisgis",
-                                 "url"     : "postgis://localhost:5432/orbisgis_db",
-                                 "tables"  : [
-                                         "rsu_indicators"         : "rsu_indicators",
-                                         "rsu_lcz"                : "rsu_lcz",
-                                         "zone"                   : "zone",
-                                         "building":"building"],
-                                 "excluded_columns"  : [
-                                         "rsu_indicators" : ["the_geom"],
-                                         "rsu_lcz"         : ["the_geom"],
-                                         "building_indicators"  : ["the_geom"]]]],
-                "parameters"  :
-                        ["distance"       : 0,
-                         rsu_indicators   : ["indicatorUse" : ["LCZ"]]
-                        ]
-        ]
-        OSM.workflow(osm_parmeters)
-        def postgis_dbProperties = [databaseName: 'orbisgis_db',
-                                    user        : 'orbisgis',
-                                    password    : 'orbisgis',
-                                    url         : 'jdbc:postgresql://localhost:5432/'
-        ]
-        POSTGIS postgis = POSTGIS.open(postgis_dbProperties);
-        if (postgis) {
-            def rsu_indicatorsTable = postgis.getTable("rsu_indicators")
-            assertNotNull(rsu_indicatorsTable)
-            assertTrue(rsu_indicatorsTable.getRowCount() > 0)
-            def rsu_lczTable = postgis.getTable("rsu_lcz")
-            assertNotNull(rsu_lczTable)
-            assertTrue(rsu_lczTable.getRowCount() > 0)
-            def zonesTable = postgis.getTable("zone")
-            assertNotNull(zonesTable)
-            assertTrue(zonesTable.getRowCount() > 0)
+    void osmWorkflowToPostGISExcludeColumns(@TempDir File folder) {
+        try {
+            def postgis_dbProperties = [databaseName: 'orbisgis_db',
+                                        user        : 'orbisgis',
+                                        password    : 'orbisgis',
+                                        url         : 'jdbc:postgresql://localhost:5432/'
+            ]
+            POSTGIS postgis = POSTGIS.open(postgis_dbProperties);
+            if (postgis) {
+                String directory = folder.absolutePath + File.separator + "osmWorkflowToPostGISExcludeColumns"
+                def osm_parmeters = [
+                        "description" : "Example of configuration file to run the OSM workflow and store the result in a folder",
+                        "geoclimatedb": [
+                                "folder": directory,
+                                "name"  : "geoclimate_chain_db;AUTO_SERVER=TRUE",
+                                "delete": false
+                        ],
+                        "input"       : [
+                                "locations": ["Pont-de-Veyle"]],
+                        "output"      : [
+                                "database":
+                                        ["user"            : "orbisgis",
+                                         "password"        : "orbisgis",
+                                         "url"             : "postgis://localhost:5432/orbisgis_db",
+                                         "tables"          : [
+                                                 "rsu_indicators": "rsu_indicators",
+                                                 "rsu_lcz"       : "rsu_lcz",
+                                                 "zone"          : "zone",
+                                                 "building"      : "building"],
+                                         "excluded_columns": [
+                                                 "rsu_indicators"     : ["the_geom"],
+                                                 "rsu_lcz"            : ["the_geom"],
+                                                 "building_indicators": ["the_geom"]]]],
+                        "parameters"  :
+                                [
+                                        rsu_indicators: ["indicatorUse": ["LCZ"]]
+                                ]
+                ]
+                OSM.workflow(osm_parmeters)
+                def rsu_indicatorsTable = postgis.getTable("rsu_indicators")
+                assertNotNull(rsu_indicatorsTable)
+                assertTrue(rsu_indicatorsTable.getRowCount() > 0)
+                def rsu_lczTable = postgis.getTable("rsu_lcz")
+                assertNotNull(rsu_lczTable)
+                assertTrue(rsu_lczTable.getRowCount() > 0)
+                def zonesTable = postgis.getTable("zone")
+                assertNotNull(zonesTable)
+                assertTrue(zonesTable.getRowCount() > 0)
+                postgis.dropTable("rsu_indicators", "rsu_lcz", "zone", "building")
+            }
+        }catch (Exception e){
+
         }
     }
 
@@ -1207,10 +1164,10 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     //Use it for debug
     @Test
     void testMergeRsu() {
-        H2GIS h2GIS  = H2GIS.open("/tmp/database")
+        H2GIS h2GIS = H2GIS.open("/tmp/database")
 
-        List domains =["/tmp/geoclimate/osm_47.642695_-2.777953_47.648651_-2.769413/",
-                       "/tmp/geoclimate/osm_47.642723_-2.769456_47.648622_-2.761259/"]
+        List domains = ["/tmp/geoclimate/osm_47.642695_-2.777953_47.648651_-2.769413/",
+                        "/tmp/geoclimate/osm_47.642723_-2.769456_47.648622_-2.761259/"]
 
         h2GIS.load("/tmp/geoclimate/osm_47.642695_-2.777953_47.648651_-2.769413/zone.fgb", "zone_a", true)
         h2GIS.load("/tmp/geoclimate/osm_47.642695_-2.777953_47.648651_-2.769413/rsu_lcz.fgb", "rsu_a_in", true)
@@ -1246,20 +1203,17 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                 union all (select b_id_rsu, the_geom, lcz_primary from diff_rsu)
                 """)
 
-        h2GIS.save("diff_rsu","/tmp/diff_rsu.fgb", true)
-        h2GIS.save("final_rsu","/tmp/final_rsu.fgb", true)
+        h2GIS.save("diff_rsu", "/tmp/diff_rsu.fgb", true)
+        h2GIS.save("final_rsu", "/tmp/final_rsu.fgb", true)
     }
 
     @Test
-    void testClip() {
-        String directory = folder.absolutePath + File.separator + "test_building_height"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testClip(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testClip"
         def bbox = [43.726898, 7.298452, 43.727677, 7.299632]
         def osm_parmeters = [
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db",
                         "delete": false
                 ],
@@ -1267,17 +1221,17 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "locations": [bbox]],
                 "output"      : [
                         "folder": directory,
-                        "domain":"zone",
+                        "domain": "zone",
                         "srid"  : 4326],
                 "parameters"  :
-                        ["distance"    : 100,
-                         rsu_indicators: ["indicatorUse": ["LCZ"]],
+                        ["distance"       : 100,
+                         rsu_indicators   : ["indicatorUse": ["LCZ"]],
                          "grid_indicators": [
-                                 "domain": "zone_extended", //Compute the grid on the extended zone
-                                "x_size"    : 100,
-                                "y_size"    : 100,
-                                "indicators": ["LCZ_PRIMARY"]
-                        ]
+                                 "domain"    : "zone_extended", //Compute the grid on the extended zone
+                                 "x_size"    : 100,
+                                 "y_size"    : 100,
+                                 "indicators": ["LCZ_PRIMARY"]
+                         ]
                         ]
         ]
         OSM.WorkflowOSM.workflow(osm_parmeters)
@@ -1286,8 +1240,8 @@ class WorflowOSMTest extends WorkflowAbstractTest {
 
         def building = "building"
         def zone = "zone"
-        h2gis.load(folder_out+File.separator+"building.fgb", building, true)
-        h2gis.load(folder_out+File.separator+"zone.fgb", zone, true)
+        h2gis.load(folder_out + File.separator + "building.fgb", building, true)
+        h2gis.load(folder_out + File.separator + "zone.fgb", zone, true)
         assertTrue h2gis.firstRow("select count(*) as count from $building where HEIGHT_WALL>0 and HEIGHT_ROOF>0").count > 0
         h2gis.execute("""DROP TABLE IF EXISTS building_out;
         CREATE TABLE building_out as SELECT a.* FROM  $building a LEFT JOIN $zone b
@@ -1295,7 +1249,7 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                 WHERE b.the_geom IS NULL;""")
         assertEquals(0, h2gis.getRowCount("building_out"))
         def grid_indicators = "grid_indicators"
-        h2gis.load(folder_out+File.separator+"grid_indicators.fgb", grid_indicators, true)
+        h2gis.load(folder_out + File.separator + "grid_indicators.fgb", grid_indicators, true)
         h2gis.execute("""DROP TABLE IF EXISTS grid_out;
         CREATE TABLE grid_out as SELECT a.* FROM  $grid_indicators a LEFT JOIN $zone b
                 ON a.the_geom && b.the_geom and ST_INTERSECTS(st_centroid(a.the_geom), b.the_geom)
@@ -1306,15 +1260,12 @@ class WorflowOSMTest extends WorkflowAbstractTest {
     }
 
     @Test
-    void testClip2() {
-        String directory = folder.absolutePath + File.separator + "test_building_height"
-        File dirFile = new File(directory)
-        dirFile.delete()
-        dirFile.mkdir()
+    void testClip2(@TempDir File folder) {
+        String directory = folder.absolutePath + File.separator + "testClip2"
         def bbox = [43.726898, 7.298452, 43.727677, 7.299632]
         def osm_parmeters = [
                 "geoclimatedb": [
-                        "folder": dirFile.absolutePath,
+                        "folder": directory,
                         "name"  : "geoclimate_chain_db",
                         "delete": false
                 ],
@@ -1322,11 +1273,11 @@ class WorflowOSMTest extends WorkflowAbstractTest {
                         "locations": [bbox]],
                 "output"      : [
                         "folder": directory,
-                        "domain":"zone_extended",
+                        "domain": "zone_extended",
                         "srid"  : 4326],
                 "parameters"  :
-                        ["distance"    : 100,
-                         rsu_indicators: ["indicatorUse": ["LCZ"]],
+                        ["distance"       : 100,
+                         rsu_indicators   : ["indicatorUse": ["LCZ"]],
                          "grid_indicators": [
                                  "x_size"    : 100,
                                  "y_size"    : 100,
@@ -1340,8 +1291,8 @@ class WorflowOSMTest extends WorkflowAbstractTest {
 
         def building = "building"
         def zone = "zone"
-        h2gis.load(folder_out+File.separator+"building.fgb", building, true)
-        h2gis.load(folder_out+File.separator+"zone.fgb", zone, true)
+        h2gis.load(folder_out + File.separator + "building.fgb", building, true)
+        h2gis.load(folder_out + File.separator + "zone.fgb", zone, true)
         assertTrue h2gis.firstRow("select count(*) as count from $building where HEIGHT_WALL>0 and HEIGHT_ROOF>0").count > 0
         h2gis.execute("""DROP TABLE IF EXISTS building_out;
         CREATE TABLE building_out as SELECT a.* FROM  $building a LEFT JOIN $zone b

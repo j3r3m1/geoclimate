@@ -175,7 +175,8 @@ class WorkflowGeoIndicatorsTest {
                 ["Bu": ["THE_GEOM", "ID_RSU", "ID_BUILD", "ID_BLOCK", "NB_LEV", "ZINDEX", "MAIN_USE", "TYPE", "ID_SOURCE",
                         "HEIGHT_ROOF", "HEIGHT_WALL", "PERIMETER", "AREA", "VOLUME", "FLOOR_AREA", "TOTAL_FACADE_LENGTH", "COMMON_WALL_FRACTION",
                         "CONTIGUITY", "AREA_CONCAVITY", "FORM_FACTOR", "RAW_COMPACTNESS", "PERIMETER_CONVEXITY",
-                        "MINIMUM_BUILDING_SPACING", "NUMBER_BUILDING_NEIGHBOR", "ROAD_DISTANCE", "LIKELIHOOD_LARGE_BUILDING"],
+                        "MINIMUM_BUILDING_SPACING", "NUMBER_BUILDING_NEIGHBOR", "ROAD_DISTANCE", "LIKELIHOOD_LARGE_BUILDING",
+                        "PASSIVE_VOLUME_RATIO"],
                  "Bl": ["THE_GEOM", "ID_RSU", "ID_BLOCK", "AREA", "FLOOR_AREA", "VOLUME", "HOLE_AREA_DENSITY", "MAIN_BUILDING_DIRECTION",
                         "BUILDING_DIRECTION_UNIQUENESS", "BUILDING_DIRECTION_EQUALITY", "CLOSINGNESS", "NET_COMPACTNESS",
                         "AVG_HEIGHT_ROOF_AREA_WEIGHTED", "STD_HEIGHT_ROOF_AREA_WEIGHTED"]]
@@ -535,7 +536,7 @@ class WorkflowGeoIndicatorsTest {
                 "building", null, null, null, null, null,
                 null, null, null)
         assertNull(grid_indicators)
-        def list_indicators = ["BUILDING_FRACTION", "BUILDING_HEIGHT", "BUILDING_POP",
+        def list_indicators = ["BUILDING_FRACTION", "BUILDING_HEIGHT",
                                "BUILDING_TYPE_FRACTION", "WATER_FRACTION", "VEGETATION_FRACTION",
                                "ROAD_FRACTION", "IMPERVIOUS_FRACTION", "FREE_EXTERNAL_FACADE_DENSITY",
                                "BUILDING_HEIGHT_WEIGHTED", "BUILDING_SURFACE_DENSITY",
@@ -556,7 +557,6 @@ class WorkflowGeoIndicatorsTest {
         assertEquals(0d, rows.WATER_PERMANENT_FRACTION)
         assertEquals(0d, rows.WATER_INTERMITTENT_FRACTION)
         assertEquals(0d, rows.UNDEFINED_FRACTION)
-        assertEquals(100d, rows.SUM_POP)
         assertEquals(10d, rows.AVG_HEIGHT_ROOF)
         assertEquals(0d, rows.STD_HEIGHT_ROOF)
         assertTrue(10d - rows.GEOM_AVG_HEIGHT_ROOF < 0.0001)
@@ -580,15 +580,15 @@ class WorkflowGeoIndicatorsTest {
     def checkRSUIndicators(def datasource, def rsuIndicatorsTableName) {
         //Check road_fraction > 0
         def countResult = datasource.firstRow("select count(*) as count from ${rsuIndicatorsTableName} WHERE ROAD_FRACTION>0".toString())
-        assertEquals(208, countResult.count)
+        assertEquals(195, countResult.count)
 
         //Check building_fraction > 0
         countResult = datasource.firstRow("select count(*) as count from ${rsuIndicatorsTableName} WHERE BUILDING_FRACTION>0".toString())
-        assertEquals(57, countResult.count)
+        assertEquals(61, countResult.count)
 
         //Check high_vegetation_fraction > 0
         countResult = datasource.firstRow("select count(*) as count from ${rsuIndicatorsTableName} WHERE high_vegetation_fraction>0".toString())
-        assertEquals(16, countResult.count)
+        assertEquals(23, countResult.count)
 
         //Check high_vegetation_water_fraction > 0
         countResult = datasource.firstRow("select count(*) as count from ${rsuIndicatorsTableName} WHERE high_vegetation_water_permanent_fraction + high_vegetation_water_intermittent_fraction>0".toString())
@@ -604,7 +604,7 @@ class WorkflowGeoIndicatorsTest {
 
         //Check high_vegetation_road_fraction > 0
         countResult = datasource.firstRow("select count(*) as count from ${rsuIndicatorsTableName} WHERE high_vegetation_road_fraction>0".toString())
-        assertEquals(9, countResult.count)
+        assertEquals(14, countResult.count)
 
         //Check high_vegetation_impervious_fraction > 0
         countResult = datasource.firstRow("select count(*) as count from ${rsuIndicatorsTableName} WHERE high_vegetation_impervious_fraction>0".toString())

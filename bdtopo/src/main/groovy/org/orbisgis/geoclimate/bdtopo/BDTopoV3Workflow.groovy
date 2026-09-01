@@ -321,28 +321,27 @@ def filterLinkedShapeFiles(def location, float distance, LinkedHashMap inputTabl
     //Check if code is a string or a bbox
     //The zone is a osm bounding box represented by ymin,xmin , ymax,xmax,
     if (location in Collection) {
-        debug "Loading in the H2GIS database $outputTableName"
-        def communeColumns = h2gis_datasource.getColumnNames(inputTables.commune)
-        if (communeColumns.contains("INSEE_COM")) {
+            debug "Loading in the H2GIS database $outputTableName"
             if (location.size() == 3) {
                 if (location[2] < 100) {
                     throw new IllegalArgumentException("The distance to create a bbox from a point must be greater than 100 meters")
                 }
                 location = BDTopoUtils.bbox(location[0], location[1], location[2])
             }
+            h2gis_datasource.execute("""DROP TABLE IF EXISTS $outputTableName ; 
+                    CREATE TABLE $outputTableName as  SELECT
+                     ST_MakeEnvelope(${location[1]},${location[0]},${location[3]},${location[2]}, $sourceSRID) as the_geom, 
+                    '${location.join("_")}' AS CODE_INSEE """)
 
-            h2gis_datasource.execute("""DROP TABLE IF EXISTS $outputTableName ; CREATE TABLE $outputTableName as  SELECT
-                    ST_INTERSECTION(the_geom, ST_MakeEnvelope(${location[1]},${location[0]},${location[3]},${location[2]}, $sourceSRID)) as the_geom, INSEE_COM AS CODE_INSEE  from ${inputTables.commune} where the_geom 
-                    && ST_MakeEnvelope(${location[1]},${location[0]},${location[3]},${location[2]}, $sourceSRID) """.toString())
-        } else {
-            throw new Exception("Cannot find a column insee_com or code_insee to filter the commune")
-        }
     } else if (location instanceof String) {
         debug "Loading in the H2GIS database $outputTableName"
         def communeColumns = h2gis_datasource.getColumnNames(inputTables.commune)
         if (communeColumns.contains("INSEE_COM")) {
-            h2gis_datasource.execute("""DROP TABLE IF EXISTS $outputTableName ; CREATE TABLE $outputTableName as SELECT $formatting_geom, 
-            INSEE_COM AS CODE_INSEE FROM ${inputTables.commune} WHERE INSEE_COM='$location' or lower(nom)='${location.toLowerCase()}'""".toString())
+            h2gis_datasource.execute("""
+            DROP TABLE IF EXISTS $outputTableName ; 
+            CREATE TABLE $outputTableName as SELECT $formatting_geom, 
+            INSEE_COM AS CODE_INSEE FROM ${inputTables.commune} WHERE INSEE_COM='$location' or lower(nom)='${location.toLowerCase()}'
+            """)
         } else {
             throw new Exception("Cannot find a column insee_com or code_insee to filter the commune")
         }
@@ -359,11 +358,12 @@ def filterLinkedShapeFiles(def location, float distance, LinkedHashMap inputTabl
             //Extract batiment
             outputTableName = "BATIMENT"
             debug "Loading in the H2GIS database $outputTableName"
-            h2gis_datasource.execute("""DROP TABLE IF EXISTS $outputTableName ; CREATE TABLE $outputTableName as SELECT ID, $formatting_geom, 
+            h2gis_datasource.execute("""DROP TABLE IF EXISTS $outputTableName ; 
+                CREATE TABLE $outputTableName as SELECT ID, $formatting_geom, 
                 NATURE,	USAGE1,NB_ETAGES, HAUTEUR,
 	            Z_MIN_TOIT, Z_MAX_TOIT 
 	            FROM ${inputTables.batiment}  WHERE the_geom && 'SRID=$sourceSRID;$geomToExtract'::GEOMETRY 
-                AND ST_INTERSECTS(the_geom, 'SRID=$sourceSRID;$geomToExtract'::GEOMETRY)""".toString())
+                AND ST_INTERSECTS(the_geom, 'SRID=$sourceSRID;$geomToExtract'::GEOMETRY)""")
         }
 
         if (inputTables.troncon_de_route) {

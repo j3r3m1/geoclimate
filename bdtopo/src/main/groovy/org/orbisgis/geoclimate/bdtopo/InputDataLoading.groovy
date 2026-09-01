@@ -281,7 +281,10 @@ def loadV2(
     def input_urban_areas = postfix "INPUT_URBAN_AREAS"
     datasource.execute(""" DROP TABLE IF EXISTS TMP_SURFACE_ACTIVITE;
             CREATE TABLE TMP_SURFACE_ACTIVITE (THE_GEOM geometry, ID varchar(24), NATURE VARCHAR) AS 
-            SELECT ST_FORCE2D(ST_MAKEVALID(ST_CollectionExtract(ST_INTERSECTION(a.THE_GEOM, B.THE_GEOM), 3))) as the_geom, a.ID,
+            SELECT 
+            CASE WHEN ST_CONTAINS(b.the_geom, a.the_geom) THEN a.the_geom else
+            ST_FORCE2D(ST_MAKEVALID(ST_CollectionExtract(ST_INTERSECTION(a.THE_GEOM, B.THE_GEOM), 3))) 
+            END as the_geom, a.ID,
             CASE WHEN a.CATEGORIE ='Administratif' THEN 'government'
             WHEN a.CATEGORIE= 'Enseignement' THEN 'education'
             WHEN a.CATEGORIE='Santé' THEN 'healthcare' 
@@ -608,7 +611,8 @@ Map loadV3(JdbcDataSource datasource,
             DROP TABLE IF EXISTS $INPUT_HYDRO;
             CREATE TABLE $INPUT_HYDRO (THE_GEOM geometry, ID_SOURCE varchar(24), ZINDEX integer, TYPE varchar, REGIME varchar)
             AS SELECT  ST_FORCE2D(ST_MAKEVALID(a.THE_GEOM)) as the_geom, a.ID, 0, a.NATURE,
-            CASE WHEN a.PERSISTANC = 'Permanent' THEN a.PERSISTANC ELSE 'Intermittent' END as REGIME FROM $surface_hydrographique a, $zone_extended 
+            CASE WHEN a.PERSISTANC = 'Permanent' THEN a.PERSISTANC ELSE 'Intermittent' END as REGIME 
+            FROM $surface_hydrographique a, $zone_extended 
             b WHERE a.the_geom && b.the_geom AND ST_INTERSECTS(a.the_geom, b.the_geom) and a.POS_SOL>=0
             and a.NATURE not in ('Conduit buse', 'Conduit forcé', 'Marais', 'Glacier névé')
             union all
@@ -643,7 +647,8 @@ Map loadV3(JdbcDataSource datasource,
     def input_urban_areas = postfix "INPUT_URBAN_AREAS"
     datasource.execute(""" DROP TABLE IF EXISTS TMP_SURFACE_ACTIVITE;
             CREATE TABLE TMP_SURFACE_ACTIVITE (THE_GEOM geometry, ID varchar(24), NATURE VARCHAR) 
-            AS SELECT ST_FORCE2D(ST_MAKEVALID(ST_CollectionExtract(ST_INTERSECTION(a.THE_GEOM, B.THE_GEOM), 3))) as the_geom, a.ID,            
+            AS SELECT CASE WHEN ST_CONTAINS(b.the_geom, a.the_geom) THEN a.the_geom else 
+            ST_FORCE2D(ST_MAKEVALID(ST_CollectionExtract(ST_INTERSECTION(a.THE_GEOM, B.THE_GEOM), 3))) END as the_geom, a.ID,            
             CASE WHEN a.CATEGORIE = 'Administratif ou militaire' 
             AND a.NATURE IN ('Administration centrale de l''Etat' , 'Aire d''accueil des gens du voyage' ,
             'Autre service déconcentré de l''Etat' , 'Borne', 'Capitainerie','Caserne de pompiers' , 'Divers public ou administratif', 

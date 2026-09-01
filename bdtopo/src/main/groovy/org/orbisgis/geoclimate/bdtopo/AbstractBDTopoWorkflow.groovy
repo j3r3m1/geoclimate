@@ -19,8 +19,7 @@
  */
 package org.orbisgis.geoclimate.bdtopo
 
-import org.h2.tools.DeleteDbFiles
-import org.h2gis.functions.io.utility.IOMethods
+
 import org.h2gis.utilities.FileUtilities
 import org.h2gis.utilities.JDBCUtilities
 import org.h2gis.utilities.URIUtilities
@@ -30,7 +29,6 @@ import org.orbisgis.data.H2GIS
 import org.orbisgis.data.api.dataset.ITable
 import org.orbisgis.data.jdbc.JdbcDataSource
 import org.orbisgis.geoclimate.Geoindicators
-import org.orbisgis.geoclimate.worldpoptools.WorldPopTools
 
 import java.sql.Connection
 import java.sql.SQLException
@@ -218,9 +216,9 @@ abstract class AbstractBDTopoWorkflow extends BDTopoUtils {
             if (tablesLinked) {
                 locations.each { location ->
                     //We must extract the data from the shapefiles for each locations
+                    def formatedZone = Geoindicators.WorkflowUtilities.formatLocation(location)
                     try {
                         if (filterLinkedShapeFiles(location, processing_parameters.distance, tablesLinked, sourceSrid, inputSRID, h2gis_datasource)) {
-                            def formatedZone = checkAndFormatLocations(location)
                             if (formatedZone) {
                                 def bdtopo_results = bdtopo_processing(formatedZone, h2gis_datasource, processing_parameters,
                                         createMainFolder(file_outputFolder, formatedZone), outputFileTables, outputDatasource,
@@ -231,8 +229,7 @@ abstract class AbstractBDTopoWorkflow extends BDTopoUtils {
                             }
                         }
                     } catch (Exception e) {
-                        String new_location =location in Collection ? location.join("_") : location
-                        saveLogZoneTable(h2gis_datasource, databaseFolder, new_location, e.getLocalizedMessage())
+                        saveLogZoneTable(h2gis_datasource, databaseFolder, formatedZone, e.getLocalizedMessage())
                         //eat the exception and process other zone
                         warn("The zone $location has not been processed. \nCause :  \n${e.getLocalizedMessage()}")
                     }
@@ -283,7 +280,7 @@ abstract class AbstractBDTopoWorkflow extends BDTopoUtils {
                         }
                     }
                 } catch (Exception e) {
-                    saveLogZoneTable(h2gis_datasource, databaseFolder, location in Collection ? location.join("_") : location, e.getLocalizedMessage())
+                    saveLogZoneTable(h2gis_datasource, databaseFolder, Geoindicators.WorkflowUtilities.formatLocation(location), e.getLocalizedMessage())
                     //eat the exception and process other zone
                     warn("The zone $location has not been processed. Please check the log table to get more informations.")
                 }
@@ -557,7 +554,7 @@ abstract class AbstractBDTopoWorkflow extends BDTopoUtils {
                     if (!list_indicators) {
                         throw new Exception("The list of indicator names cannot be null or empty")
                     }
-                    def allowed_grid_indicators = ["BUILDING_FRACTION", "BUILDING_HEIGHT", "BUILDING_POP", "BUILDING_TYPE_FRACTION", "WATER_FRACTION", "VEGETATION_FRACTION",
+                    def allowed_grid_indicators = ["BUILDING_FRACTION", "BUILDING_HEIGHT", "BUILDING_TYPE_FRACTION", "WATER_FRACTION", "VEGETATION_FRACTION",
                                                    "ROAD_FRACTION", "IMPERVIOUS_FRACTION", "UTRF_AREA_FRACTION", "UTRF_FLOOR_AREA_FRACTION", "LCZ_FRACTION", "LCZ_PRIMARY", "FREE_EXTERNAL_FACADE_DENSITY",
                                                    "BUILDING_HEIGHT_WEIGHTED", "BUILDING_SURFACE_DENSITY",
                                                    "BUILDING_HEIGHT_DISTRIBUTION", "FRONTAL_AREA_INDEX", "SEA_LAND_FRACTION", "ASPECT_RATIO",
@@ -675,23 +672,6 @@ abstract class AbstractBDTopoWorkflow extends BDTopoUtils {
                 "building_updated"]
     }
 
-
-    /**
-     * Sanity check for the location value
-     * @param id_zones
-     * @return
-     */
-    def checkAndFormatLocations(def locations) throws Exception {
-        if (locations in Collection) {
-            return locations.join("_")
-        } else if (locations instanceof String) {
-            return locations.trim()
-        } else {
-            throw new Exception("Invalid location input. \n" +
-                    "The location input must be a string value or an array of 4 coordinates to define a bbox ")
-        }
-    }
-
     /**
      * Utility method to run commmune by commune the geoclimate chain and save the result in a folder or/and
      * in a database
@@ -786,14 +766,15 @@ abstract class AbstractBDTopoWorkflow extends BDTopoUtils {
 
             } else {
                 def tablesToMerge = ["zone"               : [],
+                                     "zone_extended"      : [],
                                      "road"               : [], "rail": [], "water": [],
                                      "vegetation"         : [], "impervious": [], "building": [],
                                      "building_indicators": [], "block_indicators": [],
                                      "rsu_indicators"     : [], "rsu_lcz": [],
                                      "rsu_utrf_area"      : [], "rsu_utrf_floor_area": [],
                                      "building_utrf"      : [], "population": [], "road_traffic": [],
-                                     "grid_indicators"    : [], "urban_areas": [], "ground_acoustic": []
-
+                                     "grid_indicators"    : [], "urban_areas": [], "ground_acoustic": [],
+                                     "building_updated": []
                 ]
                 tmp_results.each { code ->
                     code.value.each { it ->
@@ -1196,10 +1177,6 @@ abstract class AbstractBDTopoWorkflow extends BDTopoUtils {
         abstractModelTableBatchExportTable(output_datasource, outputTableNames.impervious, id_zone, h2gis_datasource, h2gis_tables.impervious
                 , "", inputSRID, outputSRID, reproject,excluded_columns.get(outputTableNames.impervious))
 
-        //Export population table
-        abstractModelTableBatchExportTable(output_datasource, outputTableNames.population, id_zone, h2gis_datasource, h2gis_tables.population
-                , "", inputSRID, outputSRID, reproject,excluded_columns.get(outputTableNames.population))
-
         //Export building_updated table
         abstractModelTableBatchExportTable(output_datasource, outputTableNames.building_updated, id_zone, h2gis_datasource, h2gis_tables.building_updated
                 , "", inputSRID, outputSRID, false,excluded_columns.get(outputTableNames.building_updated))
@@ -1323,13 +1300,13 @@ abstract class AbstractBDTopoWorkflow extends BDTopoUtils {
                             //Because the select query reproject doesn't contain any geometry metadata
                             output_datasource.execute("""ALTER TABLE $output_table
                             ALTER COLUMN the_geom TYPE geometry(geometry, $outputSRID)
-                            USING ST_SetSRID(the_geom,$outputSRID);""".toString())
-
+                            USING ST_SetSRID(the_geom,$outputSRID);""")
                         }
                     }
                     if (tmpTable) {
                         //Add a GID column
-                        output_datasource.execute """ALTER TABLE $output_table ADD COLUMN IF NOT EXISTS gid serial;""".toString()
+                        output_datasource.execute("""ALTER TABLE $output_table ADD COLUMN IF NOT EXISTS gid serial;
+                                                  ALTER TABLE $output_table ADD COLUMN IF NOT EXISTS id_zone varchar;""")
                         output_datasource.execute("UPDATE $output_table SET id_zone= '${id_zone.replace("'","''")}'")
                         output_datasource.execute("""CREATE INDEX IF NOT EXISTS idx_${output_table.replaceAll(".", "_")}_id_zone  ON $output_table (ID_ZONE)""".toString())
                         info "The table $h2gis_table_to_save has been exported into the table $output_table"

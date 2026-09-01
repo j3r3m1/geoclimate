@@ -15,3 +15,5 @@
 - Fix water extraction with OSM
 - Fix islands detection
 - Improve sea/land mask when there is a single cluster of water geometry
+- Update OrbisData to 2.1.2 and H2GIS to 2.2.5
+- Replace ST_Clip by ST_Intersection to compute spatial units

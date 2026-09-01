@@ -230,7 +230,8 @@ abstract class WorkflowAbstractTest {
                             "rsu_indicators"     : "rsu_indicators",
                             "rsu_lcz"            : "rsu_lcz",
                             "zone"               : "zone",
-                            "grid_indicators"    : "grid_indicators"]
+                            "grid_indicators"    : "grid_indicators",
+                            "building_updated"   : "building_updated"]
         //Drop all output tables if exist
         H2GIS externalDB = H2GIS.open(getDBFolderPath() + File.separator + externaldb_dbProperties.databaseName,
                 externaldb_dbProperties.user, externaldb_dbProperties.password)
@@ -268,10 +269,15 @@ abstract class WorkflowAbstractTest {
         assertNotNull(process)
         //Check if the tables exist and contains at least one row
         outputTables.values().each { it ->
-            def spatialTable = externalDB.getSpatialTable(it)
-            assertNotNull(spatialTable)
-            assertEquals(2154, spatialTable.srid)
-            assertTrue(spatialTable.getRowCount() > 0)
+            if(it=="building_updated"){
+                def table = externalDB.getTable(it)
+                assertNotNull(table)
+            }else {
+                def spatialTable = externalDB.getSpatialTable(it)
+                assertNotNull(spatialTable)
+                assertEquals(2154, spatialTable.srid)
+                assertTrue(spatialTable.getRowCount() > 0)
+            }
         }
         externalDB.close()
     }
@@ -296,7 +302,8 @@ abstract class WorkflowAbstractTest {
             def outputTables = ["building_indicators": "building_indicators",
                                 "rsu_indicators"     : "rsu_indicators",
                                 "rsu_lcz"            : "rsu_lcz",
-                                "zone"               : "zone", "grid_indicators": "grid_indicators"]
+                                "zone"               : "zone",
+                                "grid_indicators": "grid_indicators"]
             //Drop all output tables if exist
             externalDB.execute("DROP TABLE IF EXISTS ${outputTables.values().join(",")};".toString())
             def bdTopoParameters = [
