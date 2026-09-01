@@ -35,7 +35,6 @@ import org.orbisgis.data.jdbc.JdbcDataSource
 import org.orbisgis.geoclimate.Geoindicators
 import org.orbisgis.geoclimate.osmtools.OSMTools
 import org.orbisgis.geoclimate.osmtools.utils.OSMElement
-import org.orbisgis.geoclimate.worldpoptools.WorldPopTools
 
 import java.sql.SQLException
 
